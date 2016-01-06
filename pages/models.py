@@ -18,6 +18,8 @@ from wagtail.wagtaildocs.blocks import DocumentChooserBlock
 
 from modelcluster.fields import ParentalKey
 
+from openstax.utils import generate_image_url
+
 
 class ImageFormatChoiceBlock(FieldBlock):
     field = forms.ChoiceField(choices=(('left','Wrap left'),('right','Wrap right'),('mid','Mid width'),('full','Full width'),))
@@ -148,7 +150,12 @@ class HomePage(Page):
         related_name='+'
     )
     
-    api_fields = ('page_header', 'introduction', 'intro_image')
+    api_fields = ('page_header', 'introduction', 'intro_image', 'intro_image_url')
+    
+    @property
+    def intro_image_url(self):
+        if self.intro_image:
+            return generate_image_url(self.intro_image, 'width-200')
 
     class Meta:
         verbose_name = "Home Page"
