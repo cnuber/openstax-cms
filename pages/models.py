@@ -22,6 +22,7 @@ from wagtail.wagtaildocs.blocks import DocumentChooserBlock
 from modelcluster.fields import ParentalKey
 
 
+
 class ImageFormatChoiceBlock(FieldBlock):
     field = forms.ChoiceField(choices=(('left','Wrap left'),('right','Wrap right'),('mid','Mid width'),('full','Full width'),))
 
@@ -158,6 +159,7 @@ class OpenStaxTeam(LinkFields):
 
 # Home Page
 class HomePage(Page):
+#    import ipdb;ipdb.set_trace()
     LEFT = 'L'
     RIGHT = 'R'
     ENTIRE = 'F'
