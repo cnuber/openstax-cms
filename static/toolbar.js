@@ -1,22 +1,8 @@
-'use strict';
 
-var halloPlugins = {
-    halloformat: {},
-    halloheadings: {formatBlocks: ['p', 'h2', 'h3', 'h4', 'h5']},
-    hallolists: {},
-    hallohr: {},
-    halloreundo: {},
-    hallowagtaillink: {},
-    hallorequireparagraphs: {}
-};
-
-function registerHalloPlugin(name, opts) {
-    halloPlugins[name] = (opts || {});
-}
 
 function makeRichTextEditable(id) {
     var input = $('#' + id);
-    var richText = $('<div class="richtext" contenteditable="true" autocomplete="off"></div>').html(input.val());
+    var richText = $('<div class="richtext"></div>').html(input.val());
     richText.insertBefore(input);
     input.hide();
 
@@ -35,7 +21,10 @@ function makeRichTextEditable(id) {
     var closestObj = input.closest('.object');
 
     richText.hallo({
+//        toolbar:null,
+//        toolbar:'halloToolbarContextual',
         toolbar: 'halloToolbarFixed',
+//        toolbar:'halloToolbarInstant',
         toolbarCssClass: (closestObj.hasClass('full')) ? 'full' : (closestObj.hasClass('stream-field')) ? 'stream-field' : '',
         plugins: halloPlugins
     }).bind('hallomodified', function(event, data) {
@@ -61,409 +50,303 @@ function makeRichTextEditable(id) {
     });
 }
 
-
-function insertRichTextDeleteControl(elem) {
-    var a = $('<a class="icon icon-cross text-replace delete-control">Delete</a>');
-    $(elem).addClass('rich-text-deletable').prepend(a);
-    a.click(function() {
-        $(elem).fadeOut(function() {
-            $(elem).remove();
+(function() {
+  (function(jQuery) {
+    return jQuery.widget('IKS.halloToolbarFixed', {
+      toolbar: null,
+      options: {
+        parentElement: 'body',
+        editable: null,
+        toolbar: null,
+        affix: true,
+        affixTopOffset: 2
+      },
+      _create: function() {
+        var el, widthToAdd,
+          _this = this;
+        this.toolbar = this.options.toolbar;
+        this.toolbar.show();
+        jQuery(this.options.parentElement).append(this.toolbar);
+        this._bindEvents();
+        jQuery(window).resize(function(event) {
+          return _this.setPosition();
         });
-    });
-}
-
-function initDateChooser(id) {
-    if (window.dateTimePickerTranslations) {
-        $('#' + id).datetimepicker({
-            closeOnDateSelect: true,
-            timepicker: false,
-            scrollInput:false,
-            format: 'Y-m-d',
-            i18n: {
-                lang: window.dateTimePickerTranslations
-            },
-            lang: 'lang'
+        jQuery(window).scroll(function(event) {
+          return _this.setPosition();
         });
-    } else {
-        $('#' + id).datetimepicker({
-            timepicker: false,
-            scrollInput:false,
-            format: 'Y-m-d'
-        });
-    }
-}
-
-function initTimeChooser(id) {
-    if (window.dateTimePickerTranslations) {
-        $('#' + id).datetimepicker({
-            closeOnDateSelect: true,
-            datepicker: false,
-            scrollInput:false,
-            format: 'H:i',
-            i18n: {
-                lang: window.dateTimePickerTranslations
-            },
-            lang: 'lang'
-        });
-    } else {
-        $('#' + id).datetimepicker({
-            datepicker: false,
-            format: 'H:i'
-        });
-    }
-}
-
-function initDateTimeChooser(id) {
-    if (window.dateTimePickerTranslations) {
-        $('#' + id).datetimepicker({
-            closeOnDateSelect: true,
-            format: 'Y-m-d H:i',
-            scrollInput:false,
-            i18n: {
-                lang: window.dateTimePickerTranslations
-            },
-            language: 'lang'
-        });
-    } else {
-        $('#' + id).datetimepicker({
-            format: 'Y-m-d H:i'
-        });
-    }
-}
-
-function InlinePanel(opts) {
-    var self = {};
-
-    self.setHasContent = function() {
-        if ($('> li', self.formsUl).not('.deleted').length) {
-            self.formsUl.parent().removeClass('empty');
+        if (this.options.parentElement === 'body') {
+          el = jQuery(this.element);
+          widthToAdd = parseFloat(el.css('padding-left'));
+          widthToAdd += parseFloat(el.css('padding-right'));
+          widthToAdd += parseFloat(el.css('border-left-width'));
+          widthToAdd += parseFloat(el.css('border-right-width'));
+          widthToAdd += (parseFloat(el.css('outline-width'))) * 2;
+          widthToAdd += (parseFloat(el.css('outline-offset'))) * 2;
+          return jQuery(this.toolbar).css("width", el.width() + widthToAdd);
+        }
+      },
+      _getPosition: function(event, selection) {
+        var offset, position, width;
+        if (!event) {
+          return;
+        }
+        width = parseFloat(this.element.css('outline-width'));
+        offset = width + parseFloat(this.element.css('outline-offset'));
+        return position = {
+          top: this.element.offset().top - this.toolbar.outerHeight() - offset,
+          left: this.element.offset().left - offset
+        };
+      },
+      _getCaretPosition: function(range) {
+        var newRange, position, tmpSpan;
+        tmpSpan = jQuery("<span/>");
+        newRange = rangy.createRange();
+        newRange.setStart(range.endContainer, range.endOffset);
+        newRange.insertNode(tmpSpan.get(0));
+        position = {
+          top: tmpSpan.offset().top,
+          left: tmpSpan.offset().left
+        };
+        tmpSpan.remove();
+        return position;
+      },
+      setPosition: function() {
+        var elementBottom, elementTop, height, offset, scrollTop, topOffset;
+        if (this.options.parentElement !== 'body') {
+          return;
+        }
+        this.toolbar.css('position', 'absolute');
+        this.toolbar.css('top', this.element.offset().top - this.toolbar.outerHeight());
+        if (this.options.affix) {
+          scrollTop = jQuery(window).scrollTop();
+          offset = this.element.offset();
+          height = this.element.height();
+          topOffset = this.options.affixTopOffset;
+          elementTop = offset.top - (this.toolbar.height() + this.options.affixTopOffset);
+          elementBottom = (height - topOffset) + (offset.top - this.toolbar.height());
+          if (scrollTop > elementTop && scrollTop < elementBottom) {
+            this.toolbar.css('position', 'fixed');
+            this.toolbar.css('top', this.options.affixTopOffset);
+          }
         } else {
-            self.formsUl.parent().addClass('empty');
+
         }
-    };
 
-    self.initChildControls = function(prefix) {
-        var childId = 'inline_child_' + prefix;
-        var deleteInputId = 'id_' + prefix + '-DELETE';
-
-        //mark container as having children to identify fields in use from those not
-        self.setHasContent();
-
-        $('#' + deleteInputId + '-button').click(function() {
-            /* set 'deleted' form field to true */
-            $('#' + deleteInputId).val('1');
-            $('#' + childId).addClass('deleted').slideUp(function() {
-                self.updateMoveButtonDisabledStates();
-                self.updateAddButtonState();
-                self.setHasContent();
-            });
+        return this.toolbar.css('left', this.element.offset().left - 2);
+      },
+      _updatePosition: function(position) {},
+      _bindEvents: function() {
+        var _this = this;
+        this.element.on('halloactivated', function(event, data) {
+          _this.setPosition();
+          return _this.toolbar.show();
         });
-
-        if (opts.canOrder) {
-            $('#' + prefix + '-move-up').click(function() {
-                var currentChild = $('#' + childId);
-                var currentChildOrderElem = currentChild.find('input[name$="-ORDER"]');
-                var currentChildOrder = currentChildOrderElem.val();
-
-                /* find the previous visible 'inline_child' li before this one */
-                var prevChild = currentChild.prev(':visible');
-                if (!prevChild.length) return;
-                var prevChildOrderElem = prevChild.find('input[name$="-ORDER"]');
-                var prevChildOrder = prevChildOrderElem.val();
-
-                // async swap animation must run before the insertBefore line below, but doesn't need to finish first
-                self.animateSwap(currentChild, prevChild);
-
-                currentChild.insertBefore(prevChild);
-                currentChildOrderElem.val(prevChildOrder);
-                prevChildOrderElem.val(currentChildOrder);
-
-                self.updateMoveButtonDisabledStates();
-            });
-
-            $('#' + prefix + '-move-down').click(function() {
-                var currentChild = $('#' + childId);
-                var currentChildOrderElem = currentChild.find('input[name$="-ORDER"]');
-                var currentChildOrder = currentChildOrderElem.val();
-
-                /* find the next visible 'inline_child' li after this one */
-                var nextChild = currentChild.next(':visible');
-                if (!nextChild.length) return;
-                var nextChildOrderElem = nextChild.find('input[name$="-ORDER"]');
-                var nextChildOrder = nextChildOrderElem.val();
-
-                // async swap animation must run before the insertAfter line below, but doesn't need to finish first
-                self.animateSwap(currentChild, nextChild);
-
-                currentChild.insertAfter(nextChild);
-                currentChildOrderElem.val(nextChildOrder);
-                nextChildOrderElem.val(currentChildOrder);
-
-                self.updateMoveButtonDisabledStates();
-            });
-        }
-
-        /* Hide container on page load if it is marked as deleted. Remove the error
-         message so that it doesn't count towards the number of errors on the tab at the
-         top of the page. */
-        if ($('#' + deleteInputId).val() === '1') {
-            $('#' + childId).addClass('deleted').hide(0, function() {
-                self.updateMoveButtonDisabledStates();
-                self.updateAddButtonState();
-                self.setHasContent();
-            });
-
-            $('#' + childId).find('.error-message').remove();
-        }
-    };
-
-    self.formsUl = $('#' + opts.formsetPrefix + '-FORMS');
-
-    self.updateMoveButtonDisabledStates = function() {
-        if (opts.canOrder) {
-            var forms = self.formsUl.children('li:visible');
-            forms.each(function(i) {
-                $('ul.controls .inline-child-move-up', this).toggleClass('disabled', i === 0).toggleClass('enabled', i !== 0);
-                $('ul.controls .inline-child-move-down', this).toggleClass('disabled', i === forms.length - 1).toggleClass('enabled', i != forms.length - 1);
-            });
-        }
-    };
-
-    self.updateAddButtonState = function() {
-        if (opts.maxForms) {
-            var forms = self.formsUl.children('li:visible');
-            var addButton = $('#' + opts.formsetPrefix + '-ADD');
-
-            if (forms.length >= opts.maxForms) {
-                addButton.addClass('disabled');
-            } else {
-                addButton.removeClass('disabled');
-            }
-        }
-    };
-
-    self.animateSwap = function(item1, item2) {
-        var parent = self.formsUl;
-        var children = parent.children('li:visible');
-
-        // Apply moving class to container (ul.multiple) so it can assist absolute positioning of it's children
-        // Also set it's relatively calculated height to be an absolute one, to prevent the container collapsing while its children go absolute
-        parent.addClass('moving').css('height', parent.height());
-
-        children.each(function() {
-            // console.log($(this));
-            $(this).css('top', $(this).position().top);
-        }).addClass('moving');
-
-        // animate swapping around
-        item1.animate({
-            top:item2.position().top
-        }, 200, function() {
-            parent.removeClass('moving').removeAttr('style');
-            children.removeClass('moving').removeAttr('style');
+        return this.element.on('hallodeactivated', function(event, data) {
+          return _this.toolbar.hide();
         });
+      }
+    });
+  })(jQuery);
 
-        item2.animate({
-            top:item1.position().top
-        }, 200, function() {
-            parent.removeClass('moving').removeAttr('style');
-            children.removeClass('moving').removeAttr('style');
-        });
-    };
+}).call(this);
 
-    buildExpandingFormset(opts.formsetPrefix, {
-        onAdd: function(formCount) {
-            var newChildPrefix = opts.emptyChildFormPrefix.replace(/__prefix__/g, formCount);
-            self.initChildControls(newChildPrefix);
-            if (opts.canOrder) {
-                /* NB form hidden inputs use 0-based index and only increment formCount *after* this function is run.
-                Therefore formcount and order are currently equal and order must be incremented
-                to ensure it's *greater* than previous item */
-                $('#id_' + newChildPrefix + '-ORDER').val(formCount + 1);
-            }
 
-            self.updateMoveButtonDisabledStates();
-            self.updateAddButtonState();
 
-            if (opts.onAdd) opts.onAdd();
+(function() {
+  (function(jQuery) {
+    return jQuery.widget("IKS.halloformat", {
+      options: {
+        editable: null,
+        uuid: '',
+        formattings: {
+          bold: true,
+          italic: true,
+          strikeThrough: false,
+          underline: false
+        },
+        buttonCssClass: null
+      },
+      populateToolbar: function(toolbar) {
+        var buttonize, buttonset, enabled, format, widget, _ref,
+          _this = this;
+        widget = this;
+        buttonset = jQuery("<span class=\"" + widget.widgetName + "\"></span>");
+        buttonize = function(format) {
+          var buttonHolder;
+          buttonHolder = jQuery('<span></span>');
+          buttonHolder.hallobutton({
+            label: format,
+            editable: _this.options.editable,
+            command: format,
+            uuid: _this.options.uuid,
+            cssClass: _this.options.buttonCssClass
+          });
+          return buttonset.append(buttonHolder);
+        };
+        _ref = this.options.formattings;
+        for (format in _ref) {
+          enabled = _ref[format];
+          if (!enabled) {
+            continue;
+          }
+          buttonize(format);
         }
+        buttonset.hallobuttonset();
+        return toolbar.append(buttonset);
+      }
     });
+  })(jQuery);
 
-    return self;
-}
+}).call(this);
 
-function cleanForSlug(val, useURLify) {
-    if (URLify != undefined && useURLify !== false) { // Check to be sure that URLify function exists, and that we want to use it.
-        return URLify(val);
-    } else { // If not just do the "replace"
-        return val.replace(/\s/g, '-').replace(/[^A-Za-z0-9\-\_]/g, '').toLowerCase();
-    }
-}
 
-function initSlugAutoPopulate() {
-    var slugFollowsTitle = false;
 
-    $('#id_title').on('focus', function() {
-        /* slug should only follow the title field if its value matched the title's value at the time of focus */
-        var currentSlug = $('#id_slug').val();
-        var slugifiedTitle = cleanForSlug(this.value);
-        slugFollowsTitle = (currentSlug == slugifiedTitle);
-    });
-
-    $('#id_title').on('keyup keydown keypress blur', function() {
-        if (slugFollowsTitle) {
-            var slugifiedTitle = cleanForSlug(this.value);
-            $('#id_slug').val(slugifiedTitle);
-        }
-    });
-}
-
-function initSlugCleaning() {
-    $('#id_slug').blur(function() {
-        // if a user has just set the slug themselves, don't remove stop words etc, just illegal characters
-        $(this).val(cleanForSlug($(this).val(), false));
-    });
-}
-
-function initErrorDetection() {
-    var errorSections = {};
-
-    // first count up all the errors
-    $('.error-message').each(function() {
-        var parentSection = $(this).closest('section');
-
-        if (!errorSections[parentSection.attr('id')]) {
-            errorSections[parentSection.attr('id')] = 0;
-        }
-
-        errorSections[parentSection.attr('id')] = errorSections[parentSection.attr('id')] + 1;
-    });
-
-    // now identify them on each tab
-    for (var index in errorSections) {
-        $('.tab-nav a[href=#' + index + ']').addClass('errors').attr('data-count', errorSections[index]);
-    }
-}
-
-function initCollapsibleBlocks() {
-    $('.object.multi-field.collapsible').each(function() {
-        var $li = $(this);
-        var $fieldset = $li.find('fieldset');
-        if ($li.hasClass('collapsed') && $li.find('.error-message').length == 0) {
-            $fieldset.hide();
-        }
-
-        $li.find('> h2').click(function() {
-            if (!$li.hasClass('collapsed')) {
-                $li.addClass('collapsed');
-                $fieldset.hide('slow');
-            } else {
-                $li.removeClass('collapsed');
-                $fieldset.show('show');
-            }
-        });
-    });
-}
-
-function initKeyboardShortcuts() {
-    Mousetrap.bind(['mod+p'], function(e) {
-        $('.action-preview').trigger('click');
-        return false;
-    });
-
-    Mousetrap.bind(['mod+s'], function(e) {
-        $('.action-save').trigger('click');
-        return false;
-    });
-}
-
-$(function() {
-    /* Only non-live pages should auto-populate the slug from the title */
-    if (!$('body').hasClass('page-is-live')) {
-        initSlugAutoPopulate();
-    }
-
-    initSlugCleaning();
-    initErrorDetection();
-    initCollapsibleBlocks();
-    initKeyboardShortcuts();
-
-    $('.richtext [contenteditable="false"]').each(function() {
-        insertRichTextDeleteControl(this);
-    });
-
-    /* Set up behaviour of preview button */
-    var previewWindow = null;
-    $('.action-preview').click(function(e) {
-        e.preventDefault();
-        var $this = $(this);
-
-        if (previewWindow) {
-            previewWindow.close();
-        }
-
-        previewWindow = window.open($this.data('placeholder'), $this.data('windowname'));
-
-        if (/MSIE/.test(navigator.userAgent)) {
-            // If IE, load contents immediately without fancy effects
-            submitPreview.call($this, false);
-        } else {
-            previewWindow.onload = function() {
-                submitPreview.call($this, true);
-            }
-        }
-
-        function submitPreview(enhanced) {
-            var previewDoc = previewWindow.document;
-
-            $.ajax({
-                type: 'POST',
-                url: $this.data('action'),
-                data: $('#page-edit-form').serialize(),
-                success: function(data, textStatus, request) {
-                    if (request.getResponseHeader('X-Wagtail-Preview') == 'ok') {
-                        if (enhanced) {
-                            var frame = previewDoc.getElementById('preview-frame');
-
-                            frame = frame.contentWindow || frame.contentDocument.document || frame.contentDocument;
-                            frame.document.open();
-                            frame.document.write(data);
-                            frame.document.close();
-
-                            var hideTimeout = setTimeout(function() {
-                                previewDoc.getElementById('loading-spinner-wrapper').className += ' remove';
-                                clearTimeout(hideTimeout);
-                            })
-
- // just enough to give effect without adding discernible slowness
-                        } else {
-                            previewDoc.open();
-                            previewDoc.write(data);
-                            previewDoc.close()
-                        }
-
-                    } else {
-                        previewWindow.close();
-                        document.open();
-                        document.write(data);
-                        document.close();
-                    }
-                },
-
-                error: function(xhr, textStatus, errorThrown) {
-                    /* If an error occurs, display it in the preview window so that
-                    we aren't just showing the spinner forever. We preserve the original
-                    error output rather than giving a 'friendly' error message so that
-                    developers can debug template errors. (On a production site, we'd
-                    typically be serving a friendly custom 500 page anyhow.) */
-
-                    previewDoc.open();
-                    previewDoc.write(xhr.responseText);
-                    previewDoc.close();
+(function() {
+  (function(jQuery) {
+    return jQuery.widget("IKS.halloheadings", {
+      options: {
+        editable: null,
+        uuid: '',
+        formatBlocks: ["p", "h1", "h2", "h3"],
+        buttonCssClass: null
+      },
+      populateToolbar: function(toolbar) {
+        var buttonize, buttonset, command, format, ie, widget, _i, _len, _ref,
+          _this = this;
+        widget = this;
+        buttonset = jQuery("<span class=\"" + widget.widgetName + "\"></span>");
+        ie = navigator.appName === 'Microsoft Internet Explorer';
+        command = (ie ? "FormatBlock" : "formatBlock");
+        buttonize = function(format) {
+          var buttonHolder;
+          buttonHolder = jQuery('<span></span>');
+          buttonHolder.hallobutton({
+            label: format,
+            editable: _this.options.editable,
+            command: command,
+            commandValue: (ie ? "<" + format + ">" : format),
+            uuid: _this.options.uuid,
+            cssClass: _this.options.buttonCssClass,
+            queryState: function(event) {
+              var compared, e, map, result, val, value, _i, _len, _ref;
+              try {
+                value = document.queryCommandValue(command);
+                if (ie) {
+                  map = {
+                    p: "normal"
+                  };
+                  _ref = [1, 2, 3, 4, 5, 6];
+                  for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+                    val = _ref[_i];
+                    map["h" + val] = val;
+                  }
+                  compared = value.match(new RegExp(map[format], "i"));
+                } else {
+                  compared = value.match(new RegExp(format, "i"));
                 }
-            });
-
+                result = compared ? true : false;
+                return buttonHolder.hallobutton('checked', result);
+              } catch (_error) {
+                e = _error;
+              }
+            }
+          });
+          buttonHolder.find('button .ui-button-text').text(format.toUpperCase());
+          return buttonset.append(buttonHolder);
+        };
+        _ref = this.options.formatBlocks;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          format = _ref[_i];
+          buttonize(format);
         }
-
+        buttonset.hallobuttonset();
+        return toolbar.append(buttonset);
+      }
     });
-});
+  })(jQuery);
+
+}).call(this);
+
+
+(function() {
+  (function(jQuery) {
+    return jQuery.widget("IKS.hallolists", {
+      options: {
+        editable: null,
+        toolbar: null,
+        uuid: '',
+        lists: {
+          ordered: true,
+          unordered: true
+        },
+        buttonCssClass: null
+      },
+      populateToolbar: function(toolbar) {
+        var buttonize, buttonset,
+          _this = this;
+        buttonset = jQuery("<span class=\"" + this.widgetName + "\"></span>");
+        buttonize = function(type, label) {
+          var buttonElement;
+          buttonElement = jQuery('<span></span>');
+          buttonElement.hallobutton({
+            uuid: _this.options.uuid,
+            editable: _this.options.editable,
+            label: label,
+            command: "insert" + type + "List",
+            icon: "icon-list-" + (label.toLowerCase()),
+            cssClass: _this.options.buttonCssClass
+          });
+          return buttonset.append(buttonElement);
+        };
+        if (this.options.lists.ordered) {
+          buttonize("Ordered", "OL");
+        }
+        if (this.options.lists.unordered) {
+          buttonize("Unordered", "UL");
+        }
+        buttonset.hallobuttonset();
+        return toolbar.append(buttonset);
+      }
+    });
+  })(jQuery);
+
+}).call(this);
+
+(function() {
+  (function(jQuery) {
+    return jQuery.widget("IKS.halloreundo", {
+      options: {
+        editable: null,
+        toolbar: null,
+        uuid: '',
+        buttonCssClass: null
+      },
+      populateToolbar: function(toolbar) {
+        var buttonize, buttonset,
+          _this = this;
+        buttonset = jQuery("<span class=\"" + this.widgetName + "\"></span>");
+        buttonize = function(cmd, label) {
+          var buttonElement;
+          buttonElement = jQuery('<span></span>');
+          buttonElement.hallobutton({
+            uuid: _this.options.uuid,
+            editable: _this.options.editable,
+            label: label,
+            icon: cmd === 'undo' ? 'icon-undo' : 'icon-repeat',
+            command: cmd,
+            queryState: false,
+            cssClass: _this.options.buttonCssClass
+          });
+          return buttonset.append(buttonElement);
+        };
+        buttonize("undo", "Undo");
+        buttonize("redo", "Redo");
+        buttonset.hallobuttonset();
+        return toolbar.append(buttonset);
+      }
+    });
+  })(jQuery);
+
+}).call(this);
+
+

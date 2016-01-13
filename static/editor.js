@@ -4,7 +4,7 @@
 */(function() {
   (function(jQuery) {
     return jQuery.widget('IKS.hallo', {
-      toolbar: 'halloToolbarFixed',
+      toolbar: null,
       bound: false,
       originalContent: '',
       previousContent: '',
