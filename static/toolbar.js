@@ -1,6 +1,7 @@
 
 
 function makeRichTextEditable(id) {
+    insertRichTextDeleteControl('icon-bold');
     var input = $('#' + id);
     var richText = $('<div class="richtext"></div>').html(input.val());
     richText.insertBefore(input);
@@ -159,10 +160,10 @@ function makeRichTextEditable(id) {
         editable: null,
         uuid: '',
         formattings: {
-          bold: true,
+          bold: false,
           italic: true,
-          strikeThrough: false,
-          underline: false
+          strikeThrough: true,
+          underline: true
         },
         buttonCssClass: null
       },
