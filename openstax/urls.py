@@ -12,6 +12,7 @@ from wagtail.contrib.wagtailapi import urls as wagtailapi_urls
 from api import urls as image_api_urls_v0
 
 urlpatterns = [
+    url(r'^o/', include('oauth2_provider.urls', namespace='oauth2_provider')),
     url(r'^django-admin/', include(admin.site.urls)),
 
     url(r'^admin/', include(wagtailadmin_urls)),

@@ -16,6 +16,7 @@ With PostgreSQL running (and configured to allow you to connect as the 'postgres
     pip install -r requirements/dev.txt
     createdb -U postgres openstax
     ./manage.py migrate
+    ./manage.py migrate oauth2_provider
     ./manage.py createsuperuser
     ./manage.py runserver
 

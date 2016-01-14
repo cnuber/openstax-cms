@@ -131,6 +131,7 @@ ROOT_URLCONF = 'openstax.urls'
 WSGI_APPLICATION = 'openstax.wsgi.application'
 
 INSTALLED_APPS = (
+    'oauth2_provider',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
